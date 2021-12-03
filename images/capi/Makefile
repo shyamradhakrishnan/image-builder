@@ -48,7 +48,7 @@ version: ## Display version of image-builder
 
 .PHONY: deps
 deps: ## Installs/checks all dependencies
-deps: deps-ami deps-azure deps-do deps-gce deps-ova deps-qemu deps-raw
+deps: deps-ami deps-azure deps-do deps-gce deps-ova deps-qemu deps-raw deps-oci
 
 .PHONY: deps-ami
 deps-ami: ## Installs/checks dependencies for AMI builds
@@ -99,6 +99,12 @@ deps-qemu:
 .PHONY: deps-raw
 deps-raw: ## Installs/checks dependencies for RAW builds
 deps-raw:
+	hack/ensure-ansible.sh
+	hack/ensure-packer.sh
+
+.PHONY: deps-oci
+deps-oci: ## Installs/checks dependencies for OCI builds
+deps-oci:
 	hack/ensure-ansible.sh
 	hack/ensure-packer.sh
 
@@ -248,6 +254,7 @@ GCE_BUILD_NAMES			   ?= gce-ubuntu-1804 ## gce-ubuntu-2004
 AZURE_BUILD_VHD_NAMES	   ?= azure-vhd-ubuntu-1804 azure-vhd-ubuntu-2004 azure-vhd-centos-7 azure-vhd-windows-2019 azure-vhd-windows-2019-containerd azure-vhd-windows-2022-containerd
 AZURE_BUILD_SIG_NAMES	   ?= azure-sig-ubuntu-1804 azure-sig-ubuntu-2004 azure-sig-centos-7 azure-sig-windows-2019 azure-sig-windows-2019-containerd azure-sig-flatcar azure-sig-windows-2022-containerd
 AZURE_BUILD_SIG_GEN2_NAMES ?= azure-sig-ubuntu-1804-gen2 azure-sig-ubuntu-2004-gen2 azure-sig-centos-7-gen2
+OCI_BUILD_NAMES			   ?= oci-ubuntu-1804 oci-ubuntu-2004 oci-oracle-linux-8
 
 DO_BUILD_NAMES 			?=	do-centos-7 do-ubuntu-1804 do-ubuntu-2004
 
@@ -289,6 +296,8 @@ QEMU_BUILD_TARGETS	:= $(addprefix build-,$(QEMU_BUILD_NAMES))
 QEMU_VALIDATE_TARGETS	:= $(addprefix validate-,$(QEMU_BUILD_NAMES))
 RAW_BUILD_TARGETS      := $(addprefix build-,$(RAW_BUILD_NAMES))
 RAW_VALIDATE_TARGETS   := $(addprefix validate-,$(RAW_BUILD_NAMES))
+OCI_BUILD_TARGETS	:= $(addprefix build-,$(OCI_BUILD_NAMES))
+OCI_VALIDATE_TARGETS	:= $(addprefix validate-,$(OCI_BUILD_NAMES))
 
 .PHONY: $(NODE_OVA_LOCAL_BUILD_TARGETS)
 $(NODE_OVA_LOCAL_BUILD_TARGETS): deps-ova
@@ -416,6 +425,14 @@ $(RAW_BUILD_TARGETS): deps-raw
 .PHONY: $(RAW_VALIDATE_TARGETS)
 $(RAW_VALIDATE_TARGETS): deps-raw
 	packer validate $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/raw/$(subst validate-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) -except=flatcar packer/raw/packer.json
+
+.PHONY: $(OCI_BUILD_TARGETS)
+$(OCI_BUILD_TARGETS): deps-oci
+	packer build $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/oci/$(subst build-oci-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/oci/packer.json
+
+.PHONY: $(OCI_VALIDATE_TARGETS)
+$(OCI_VALIDATE_TARGETS): deps-oci
+	packer validate $(PACKER_NODE_FLAGS) -var-file="$(abspath packer/oci/$(subst validate-oci-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/oci/packer.json
 
 
 ## --------------------------------------
@@ -561,6 +578,11 @@ build-raw-ubuntu-1804: ## Builds Ubuntu 18.04 RAW image
 build-raw-ubuntu-2004: ## Builds Ubuntu 20.04 RAW image
 build-raw-ubuntu-2004-efi: ## Builds Ubuntu 20.04 RAW image that EFI boots
 build-raw-all: $(RAW_BUILD_TARGETS) ## Builds all RAW images
+
+build-oci-ubuntu-1804: ## Builds the OCI ubuntu-1804 image
+build-oci-ubuntu-2004: ## Builds the OCI ubuntu-2004 image
+build-oci-oracle-linux-8: ## Builds the OCI Oracle Linux 8.x image
+build-oci-all: $(OCI_BUILD_TARGETS) ## Builds all OCI image
 
 ## --------------------------------------
 ## Document dynamic validate targets

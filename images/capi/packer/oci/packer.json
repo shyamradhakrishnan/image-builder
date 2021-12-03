@@ -1,0 +1,86 @@
+{
+  "builders": [
+    {
+      "availability_domain": "{{user `availability_domain`}}",
+      "base_image_filter": {
+        "operating_system": "{{user `operating_system`}}",
+        "operating_system_version": "{{user `operating_system_version`}}"
+      },
+      "compartment_ocid": "{{user `compartment_ocid`}}",
+      "subnet_ocid": "{{user `subnet_ocid`}}",
+      "image_name": "cluster-api-{{user `build_name`}}-{{user `kubernetes_semver`}}-{{user `build_timestamp`}}",
+      "shape": "{{user `shape`}}",
+      "ssh_username": "{{user `ssh_username`}}",
+      "shape_config": {
+        "ocpus": "{{user `ocpus`}}"
+      },
+      "type": "oracle-oci"
+    }
+  ],
+  "provisioners": [
+    {
+      "environment_vars": [
+        "BUILD_NAME={{user `build_name`}}"
+      ],
+      "inline": [
+        "if [ $BUILD_NAME != \"ubuntu-1804\" ] || [ $BUILD_NAME != \"ubuntu-2004\" ]; then exit 0; fi",
+        "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for cloud-init...'; sleep 1; done",
+        "sudo apt-get -qq update && sudo DEBIAN_FRONTEND=noninteractive apt-get -qqy install python python-pip"
+      ],
+      "type": "shell"
+    },
+    {
+      "ansible_env_vars": [
+        "ANSIBLE_SSH_ARGS='{{user `existing_ansible_ssh_args`}} -o IdentitiesOnly=yes'"
+      ],
+      "extra_arguments": [
+        "--extra-vars",
+        "{{user `ansible_common_vars`}}",
+        "--extra-vars",
+        "{{user `ansible_extra_vars`}}"
+      ],
+      "playbook_file": "./ansible/node.yml",
+      "type": "ansible"
+    }
+  ],
+  "variables": {
+    "ansible_common_vars": "",
+    "ansible_extra_vars": "",
+    "build_timestamp": "{{timestamp}}",
+    "containerd_sha256": null,
+    "containerd_url": "https://github.com/containerd/containerd/releases/download/v{{user `containerd_version`}}/cri-containerd-cni-{{user `containerd_version`}}-linux-amd64.tar.gz",
+    "containerd_version": null,
+    "crictl_url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{user `crictl_version`}}/crictl-v{{user `crictl_version`}}-linux-amd64.tar.gz",
+    "crictl_version": null,
+    "disable_default_service_account": "",
+    "encrypted": "false",
+    "existing_ansible_ssh_args": "{{env `ANSIBLE_SSH_ARGS`}}",
+    "kubernetes_cni_deb_version": null,
+    "kubernetes_cni_http_source": null,
+    "kubernetes_cni_rpm_version": null,
+    "kubernetes_cni_semver": null,
+    "kubernetes_cni_source_type": null,
+    "kubernetes_container_registry": null,
+    "kubernetes_deb_gpg_key": null,
+    "kubernetes_deb_repo": null,
+    "kubernetes_deb_version": null,
+    "kubernetes_http_source": null,
+    "kubernetes_load_additional_imgs": null,
+    "kubernetes_rpm_gpg_check": null,
+    "kubernetes_rpm_gpg_key": null,
+    "kubernetes_rpm_repo": null,
+    "kubernetes_rpm_version": null,
+    "kubernetes_semver": null,
+    "kubernetes_series": null,
+    "kubernetes_source_type": null,
+    "availability_domain": null,
+    "region": "us-ashburn-1",
+    "compartment_ocid": null,
+    "subnet_ocid": null,
+    "ssh_username": null,
+    "operating_system": null,
+    "operating_system_version": null,
+    "shape": "VM.Standard.E4.Flex",
+    "ocpus": "1"
+  }
+}
